@@ -13,7 +13,7 @@ function DeltaPill({ label, current, proposed, invert = false }) {
   const color = improved ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10" : "text-orange-200 border-orange-500/30 bg-orange-500/10";
 
   return (
-    <div className="rounded-xl border border-[#22355b] bg-[#0a152b] p-3">
+    <div className="rounded-xl border border-[#404040] bg-[#171717] p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <div className="text-sm text-slate-300">
@@ -77,7 +77,7 @@ export default function ScenarioWarRoom({ insightData, onRunScenario, running })
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-2xl font-extrabold text-slate-100">
-            <FiTarget className="text-[#97acff]" />
+            <FiTarget className="text-[#f59e0b]" />
             Scenario War Room
           </h3>
           <p className="mt-1 text-sm text-slate-400">Run what-if controls and generate a scenario-adjusted BRD from the same source context.</p>
@@ -86,7 +86,7 @@ export default function ScenarioWarRoom({ insightData, onRunScenario, running })
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-2xl border border-[#22355b] bg-[#081226] p-4">
+        <div className="rounded-2xl border border-[#404040] bg-[#121212] p-4">
           <p className="mb-3 text-sm font-semibold text-slate-200">Control Variables</p>
           <div className="space-y-4">
             {controls.map((item) => (
@@ -101,7 +101,7 @@ export default function ScenarioWarRoom({ insightData, onRunScenario, running })
                   max={item.max}
                   value={item.value}
                   onChange={(event) => item.onChange(Number(event.target.value))}
-                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-[#111f3a] accent-[#7c4dff]"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-[#262626] accent-[#b45309]"
                 />
               </div>
             ))}
@@ -115,7 +115,7 @@ export default function ScenarioWarRoom({ insightData, onRunScenario, running })
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-[#22355b] bg-[#081226] p-4"
+          className="rounded-2xl border border-[#404040] bg-[#121212] p-4"
         >
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
             <FiActivity size={16} />

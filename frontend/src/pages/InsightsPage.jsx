@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiCheckCircle, FiTarget, FiAlertTriangle, FiZap } from "react-icons/fi";
 import AnalysisDashboard from "../components/AnalysisDashboard";
 import ScenarioWarRoom from "../components/ScenarioWarRoom";
 import { useAppStore } from "../store/useAppStore";
@@ -96,6 +96,34 @@ export default function InsightsPage() {
   const classifications = effectiveInsights?.input?.classifications || [];
   const executiveBrief = effectiveInsights?.executive_brief;
 
+  // Control Variables for the KPI Bar
+  const kpiMetrics = [
+    { 
+      label: "Scope Expansion", 
+      value: "+35%", 
+      icon: <FiZap className="text-blue-400" />,
+      border: "border-blue-500/20"
+    },
+    { 
+      label: "Budget Change", 
+      value: "0%", 
+      icon: <FiTarget className="text-emerald-400" />,
+      border: "border-emerald-500/20"
+    },
+    { 
+      label: "Timeline Buffer", 
+      value: "0%", 
+      icon: <FiCheckCircle className="text-purple-400" />,
+      border: "border-purple-500/20"
+    },
+    { 
+      label: "Team Capacity", 
+      value: "0%", 
+      icon: <FiAlertTriangle className="text-orange-400" />,
+      border: "border-orange-500/20"
+    },
+  ];
+
   async function runScenarioBrd(scenario) {
     if (!sessionId) return;
     try {
@@ -165,7 +193,7 @@ ${executiveBrief.recommendation}
       <div className="neon-panel interactive-tile p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-extrabold text-slate-100">Strategic Intelligence Deck</h2>
+            <h2 className="text-2xl font-extrabold text-slate-100">PREFLIGHT Intelligence Deck</h2>
             <p className="mt-1 text-sm text-slate-400">
               Real-time operational analytics computed from actual extraction and conflict-detection outputs.
             </p>
@@ -179,7 +207,7 @@ ${executiveBrief.recommendation}
             ) : null}
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#24385f] bg-[#0a162d] px-3 py-2">
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#404040] bg-[#171717] px-3 py-2">
           <FiSearch className="text-slate-400" />
           <input
             value={query}
@@ -198,6 +226,22 @@ ${executiveBrief.recommendation}
             </span>
           ))}
           {classifications.length === 0 ? <span className="kpi-badge">No classifications yet</span> : null}
+        </div>
+      </div>
+
+      {/* Control Variables Bar */}
+      <div className="neon-panel p-4">
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Control Variables</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {kpiMetrics.map((metric, idx) => (
+            <div key={idx} className={`flex items-center gap-4 rounded-xl border bg-[#121212] p-4 ${metric.border}`}>
+              <div className="text-2xl">{metric.icon}</div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{metric.label}</p>
+                <p className="text-lg font-mono font-bold text-slate-100">{metric.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

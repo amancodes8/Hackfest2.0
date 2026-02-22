@@ -9,8 +9,11 @@ const defaultProgress = {
   error: null
 };
 
-function createSession() {
-  const id = uuidv4();
+function createSession(customId) {
+  const id = customId || uuidv4();
+  const existing = sessions.get(id);
+  if (existing) return existing;
+
   const session = {
     id,
     rawItems: [],
@@ -20,6 +23,7 @@ function createSession() {
     extracted: null,
     conflicts: [],
     brd: "",
+    boardroomDeck: null,
     generationOptions: null,
     brdAssessment: null,
     progress: { ...defaultProgress },
@@ -27,6 +31,11 @@ function createSession() {
   };
   sessions.set(id, session);
   return session;
+}
+
+function ensureSession(sessionId) {
+  if (!sessionId) return createSession();
+  return sessions.get(sessionId) || createSession(sessionId);
 }
 
 function getSession(sessionId) {
@@ -44,7 +53,7 @@ function requireSession(sessionId) {
 }
 
 function appendContent(sessionId, source, content, meta = {}) {
-  const session = requireSession(sessionId);
+  const session = ensureSession(sessionId);
   const normalized = String(content || "").trim();
   session.rawItems.push({
     source,
@@ -57,7 +66,7 @@ function appendContent(sessionId, source, content, meta = {}) {
 }
 
 function setProgress(sessionId, progressPatch) {
-  const session = requireSession(sessionId);
+  const session = ensureSession(sessionId);
   session.progress = {
     ...session.progress,
     ...progressPatch
@@ -65,11 +74,12 @@ function setProgress(sessionId, progressPatch) {
 }
 
 function resetGenerationArtifacts(sessionId) {
-  const session = requireSession(sessionId);
+  const session = ensureSession(sessionId);
   session.cleanedChunks = [];
   session.extracted = null;
   session.conflicts = [];
   session.brd = "";
+  session.boardroomDeck = null;
   session.brdAssessment = null;
   session.generatedAt = null;
   setProgress(sessionId, { ...defaultProgress });
@@ -77,6 +87,7 @@ function resetGenerationArtifacts(sessionId) {
 
 module.exports = {
   createSession,
+  ensureSession,
   getSession,
   requireSession,
   appendContent,

@@ -7,7 +7,7 @@ import PipelineStepper from "../components/PipelineStepper";
 import BrdViewer from "../components/BrdViewer";
 import ChatAssistant from "../components/ChatAssistant";
 
-export default function WorkspacePage() {
+export default function StrategyLab() {
   const {
     loading,
     error,
@@ -88,7 +88,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
         setError(err.message);
         setPolling(false);
       }
-    }, 1200);
+    }, 700);
 
     return () => clearInterval(timer);
   }, [polling, sessionId, setBrd, setError, setInsightData, setPolling, setProgress]);
@@ -225,7 +225,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
               <select
                 value={outputMode}
                 onChange={(event) => setOutputMode(event.target.value)}
-                className="w-full rounded-xl border border-[#2a3d66] bg-[#0a162c] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#5a7dff]"
+                className="w-full rounded-xl border border-[#525252] bg-[#171717] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#f59e0b]"
               >
                 <option value="concise">Concise (executive summary)</option>
                 <option value="standard">Standard (balanced)</option>
@@ -238,7 +238,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
                 <select
                   value={generationOptions.audience}
                   onChange={(event) => setGenerationOption("audience", event.target.value)}
-                  className="w-full rounded-xl border border-[#2a3d66] bg-[#0a162c] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#5a7dff]"
+                  className="w-full rounded-xl border border-[#525252] bg-[#171717] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#f59e0b]"
                 >
                   <option>Product and Engineering Leadership</option>
                   <option>Executive Board and CXOs</option>
@@ -251,7 +251,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
                 <select
                   value={generationOptions.industry}
                   onChange={(event) => setGenerationOption("industry", event.target.value)}
-                  className="w-full rounded-xl border border-[#2a3d66] bg-[#0a162c] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#5a7dff]"
+                  className="w-full rounded-xl border border-[#525252] bg-[#171717] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#f59e0b]"
                 >
                   <option>General Technology</option>
                   <option>FinTech</option>
@@ -265,7 +265,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
                 <select
                   value={generationOptions.tone}
                   onChange={(event) => setGenerationOption("tone", event.target.value)}
-                  className="w-full rounded-xl border border-[#2a3d66] bg-[#0a162c] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#5a7dff]"
+                  className="w-full rounded-xl border border-[#525252] bg-[#171717] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#f59e0b]"
                 >
                   <option>Executive and precise</option>
                   <option>Technical and implementation-focused</option>
@@ -277,7 +277,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
                 <select
                   value={generationOptions.compliance}
                   onChange={(event) => setGenerationOption("compliance", event.target.value)}
-                  className="w-full rounded-xl border border-[#2a3d66] bg-[#0a162c] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#5a7dff]"
+                  className="w-full rounded-xl border border-[#525252] bg-[#171717] px-3 py-2 text-sm text-slate-100 outline-none focus:border-[#f59e0b]"
                 >
                   <option>Standard enterprise controls</option>
                   <option>SOC 2 and ISO 27001</option>
@@ -326,7 +326,7 @@ Potential conflict: Sales wants full invoice workflow by Q3, but Engineering est
       {error ? <div className="rounded-xl border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-200">{error}</div> : null}
 
       {polling && !brd ? (
-        <div className="rounded-2xl border border-slate-800 bg-[#091226] p-6">
+        <div className="rounded-2xl border border-slate-800 bg-[#121212] p-6">
           <div className="skeleton mb-4 h-5 w-1/4 rounded" />
           <div className="skeleton mb-2 h-3 w-full rounded" />
           <div className="skeleton mb-2 h-3 w-5/6 rounded" />

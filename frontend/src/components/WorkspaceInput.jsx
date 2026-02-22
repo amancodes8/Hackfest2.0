@@ -32,7 +32,7 @@ export default function WorkspaceInput({
           value={sourceText}
           onChange={(e) => onChangeText(e.target.value)}
           placeholder="Paste emails, chat logs, meeting transcripts, and project notes..."
-          className="h-72 w-full resize-none rounded-2xl border border-[#22355b] bg-[#081020] p-5 text-sm leading-7 text-slate-100 outline-none transition focus:border-[#5a7dff]"
+          className="h-72 w-full resize-none rounded-2xl border border-[#404040] bg-[#121212] p-5 text-sm leading-7 text-slate-100 outline-none transition focus:border-[#f59e0b]"
         />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -56,10 +56,10 @@ export default function WorkspaceInput({
             onUploadFile(e.dataTransfer.files?.[0]);
           }}
           className={`rounded-3xl border-2 border-dashed px-6 py-10 text-center transition ${
-            dragging ? "border-blue-500 bg-[#0e1a35]" : "border-slate-800/90 bg-[#081020]"
+            dragging ? "border-amber-500 bg-[#1f1f1f]" : "border-slate-800/90 bg-[#121212]"
           }`}
         >
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#081226] text-slate-500 shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#121212] text-slate-500 shadow-sm">
             <FiUploadCloud size={22} />
           </div>
           <p className="text-sm font-bold text-slate-100">Drop source files here</p>

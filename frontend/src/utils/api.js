@@ -37,6 +37,7 @@ export const api = {
   getProgress: (sessionId) => request(`/api/progress?session_id=${sessionId}`),
   getBrd: (sessionId) => request(`/api/brd?session_id=${sessionId}`),
   getInsights: (sessionId) => request(`/api/insights?session_id=${sessionId}`),
+  getBoardroom: (sessionId) => request(`/api/boardroom?session_id=${sessionId}`),
   chat: (sessionId, message) =>
     request("/api/chat", {
       method: "POST",

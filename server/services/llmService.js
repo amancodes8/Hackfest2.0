@@ -21,6 +21,9 @@ async function generateBrdWithGemini(payload) {
   const mode = normalizeMode(payload.mode);
   const modeInstruction = getModeInstruction(mode);
   const options = normalizeOptions(payload.options);
+  const sourceContent = trimPromptContent(payload.combinedText, Number(process.env.BRD_MAX_SOURCE_CHARS || 7000));
+  const normalizedForPrompt = normalizePromptSignals(payload.normalized);
+  const conflictsForPrompt = (payload.conflicts || []).slice(0, 40);
 
   const prompt = `You are an enterprise business analyst creating a production-quality Business Requirements Document (BRD).
 
@@ -59,13 +62,13 @@ Input Classification:
 ${(payload.classifications || []).join(", ") || "Unknown"}
 
 Normalized Signals:
-${JSON.stringify(payload.normalized, null, 2)}
+${JSON.stringify(normalizedForPrompt, null, 2)}
 
 Detected Conflicts:
-${JSON.stringify(payload.conflicts, null, 2)}
+${JSON.stringify(conflictsForPrompt, null, 2)}
 
 Source Content:
-${payload.combinedText}
+${sourceContent}
 `;
 
   const response = await client.models.generateContent({
@@ -78,7 +81,8 @@ ${payload.combinedText}
     throw new Error("Gemini returned an empty BRD response");
   }
 
-  const shouldRefine = String(process.env.BRD_ENABLE_REFINEMENT || "true").toLowerCase() !== "false";
+  // Refinement is disabled by default for faster response; enable explicitly via BRD_ENABLE_REFINEMENT=true.
+  const shouldRefine = String(process.env.BRD_ENABLE_REFINEMENT || "false").toLowerCase() === "true";
   if (!shouldRefine) return initialText;
 
   return await refineBrdWithGemini({
@@ -88,6 +92,46 @@ ${payload.combinedText}
     options,
     conflicts: payload.conflicts || []
   });
+}
+
+async function generateBrdWithRetry(payload, opts = {}) {
+  const maxRetries = Number.isFinite(Number(opts.maxRetries))
+    ? Number(opts.maxRetries)
+    : Number(process.env.BRD_LLM_MAX_RETRIES || 2);
+  const retryLimit = Math.max(0, maxRetries);
+
+  let lastError = null;
+  for (let attempt = 0; attempt <= retryLimit; attempt += 1) {
+    try {
+      return await generateBrdWithGemini(payload);
+    } catch (error) {
+      lastError = error;
+      const canRetry = isQuotaOrRateLimitError(error) && attempt < retryLimit;
+      if (!canRetry) break;
+      const delayMs = parseRetryDelayMs(error, attempt);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError || new Error("Gemini BRD generation failed");
+}
+
+function trimPromptContent(text, maxChars = 7000) {
+  const input = String(text || "");
+  if (!Number.isFinite(maxChars) || maxChars <= 0 || input.length <= maxChars) return input;
+  return `${input.slice(0, maxChars)}\n\n[Truncated for prompt efficiency]`;
+}
+
+function normalizePromptSignals(normalized = {}) {
+  return {
+    functionalRequirements: Array.isArray(normalized.functionalRequirements)
+      ? normalized.functionalRequirements.slice(0, 80)
+      : [],
+    timelineMilestones: Array.isArray(normalized.timelineMilestones)
+      ? normalized.timelineMilestones.slice(0, 60)
+      : [],
+    risks: Array.isArray(normalized.risks) ? normalized.risks.slice(0, 60) : []
+  };
 }
 
 async function refineBrdWithGemini({ model, draftBrd, mode, options, conflicts }) {
@@ -252,8 +296,130 @@ ${message}`;
   return response?.text?.trim() || "I could not derive an answer from the BRD context.";
 }
 
+async function generateBoardroomDeckWithGemini({ brd, analysis, conflicts, options, assessment }) {
+  const client = getClient();
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+
+  const prompt = `You are creating a boardroom-ready strategic briefing deck from BRD analysis.
+Return strict JSON only with this schema:
+{
+  "verdict": "PROCEED WITH CAUTION | PROCEED | HOLD | NO-GO",
+  "ai_confidence": 0-100,
+  "strategic_summary": "string",
+  "financial_exposure": "string (e.g. $450K)",
+  "strategic_upside": "string (e.g. $45M)",
+  "critical_risks": [
+    { "statement": "string", "confidence": 0-100 }
+  ],
+  "required_actions": [
+    { "title": "string", "priority_note": "string" }
+  ],
+  "monitoring_notes": ["string", "string"]
+}
+
+Rules:
+- Use real data from inputs only; do not fabricate facts.
+- Keep executive tone and concise wording.
+- Keep exactly 3-5 critical risks and 3-5 required actions.
+- If exact financial figures are unavailable, infer bounded ranges conservatively and clearly format as compact currency.
+
+Options:
+${JSON.stringify(options || {}, null, 2)}
+
+Analysis:
+${JSON.stringify(analysis || {}, null, 2)}
+
+Assessment:
+${JSON.stringify(assessment || {}, null, 2)}
+
+Conflicts:
+${JSON.stringify((conflicts || []).slice(0, 20), null, 2)}
+
+BRD:
+${String(brd || "").slice(0, 8000)}
+`;
+
+  const response = await client.models.generateContent({ model, contents: prompt });
+  const parsed = parseJsonObject(response?.text?.trim() || "");
+  if (!parsed) throw new Error("Gemini boardroom response was not valid JSON");
+
+  return {
+    verdict: String(parsed.verdict || "PROCEED WITH CAUTION"),
+    ai_confidence: clamp(Number(parsed.ai_confidence) || 70, 0, 100),
+    strategic_summary: String(parsed.strategic_summary || "Strategic summary unavailable."),
+    financial_exposure: String(parsed.financial_exposure || "$0"),
+    strategic_upside: String(parsed.strategic_upside || "$0"),
+    critical_risks: Array.isArray(parsed.critical_risks)
+      ? parsed.critical_risks.slice(0, 5).map((item) => ({
+          statement: String(item?.statement || ""),
+          confidence: clamp(Number(item?.confidence) || 60, 0, 100)
+        }))
+      : [],
+    required_actions: Array.isArray(parsed.required_actions)
+      ? parsed.required_actions.slice(0, 5).map((item) => ({
+          title: String(item?.title || ""),
+          priority_note: String(item?.priority_note || "Priority for board execution")
+        }))
+      : [],
+    monitoring_notes: Array.isArray(parsed.monitoring_notes)
+      ? parsed.monitoring_notes.slice(0, 5).map(String)
+      : []
+  };
+}
+
+async function generateBoardroomDeckWithRetry(payload, opts = {}) {
+  const maxRetries = Number.isFinite(Number(opts.maxRetries))
+    ? Number(opts.maxRetries)
+    : Number(process.env.BRD_LLM_MAX_RETRIES || 2);
+  const retryLimit = Math.max(0, maxRetries);
+
+  let lastError = null;
+  for (let attempt = 0; attempt <= retryLimit; attempt += 1) {
+    try {
+      return await generateBoardroomDeckWithGemini(payload);
+    } catch (error) {
+      lastError = error;
+      const canRetry = isQuotaOrRateLimitError(error) && attempt < retryLimit;
+      if (!canRetry) break;
+      const delayMs = parseRetryDelayMs(error, attempt);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError || new Error("Gemini boardroom generation failed");
+}
+
+function isQuotaOrRateLimitError(error) {
+  const raw = String(error?.message || error || "");
+  return (
+    raw.includes('"code":429') ||
+    raw.includes("RESOURCE_EXHAUSTED") ||
+    raw.toLowerCase().includes("quota exceeded") ||
+    raw.toLowerCase().includes("rate limit")
+  );
+}
+
+function parseRetryDelayMs(error, attempt) {
+  const raw = String(error?.message || error || "");
+  const fromRetryInfo = raw.match(/"retryDelay":"(\d+(?:\.\d+)?)s"/i);
+  if (fromRetryInfo) return Math.max(300, Math.ceil(Number(fromRetryInfo[1]) * 1000));
+
+  const fromMessage = raw.match(/Please retry in\s+(\d+(?:\.\d+)?)s/i);
+  if (fromMessage) return Math.max(300, Math.ceil(Number(fromMessage[1]) * 1000));
+
+  const base = 1200 * Math.pow(2, attempt);
+  const jitter = Math.floor(Math.random() * 400);
+  return Math.min(12000, base + jitter);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 module.exports = {
   generateBrdWithGemini,
+  generateBrdWithRetry,
+  generateBoardroomDeckWithRetry,
   generateStrategicAssessment,
   chatWithBrd
 };

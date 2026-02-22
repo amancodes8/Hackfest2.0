@@ -11,6 +11,7 @@ import {
   FiGitMerge,
   FiLayers,
   FiList,
+  FiRotateCcw,
   FiShield
 } from "react-icons/fi";
 
@@ -18,38 +19,45 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function RingGauge({ label, value, color = "#6b6dff", delay = 0 }) {
+function RingGauge({ label, value, color = "#d97706", delay = 0, compact = false }) {
   const pct = clamp(Math.round(value), 0, 100);
   const circumference = 2 * Math.PI * 42;
   const dash = (pct / 100) * circumference;
+  const size = compact ? 92 : 112;
+  const center = size / 2;
+  const radius = compact ? 34 : 42;
+  const localCircumference = 2 * Math.PI * radius;
+  const localDash = (pct / 100) * localCircumference;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
-      className="text-center"
+      className={compact ? "flex items-center gap-3 rounded-xl border border-[#2f2f2f] bg-[#101010] p-3" : "text-center"}
     >
-      <svg width="112" height="112" viewBox="0 0 112 112" className="mx-auto">
-        <circle cx="56" cy="56" r="42" fill="none" stroke="#132341" strokeWidth="8" />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={compact ? "shrink-0" : "mx-auto"}>
+        <circle cx={center} cy={center} r={radius} fill="none" stroke="#1f1f1f" strokeWidth="8" />
         <motion.circle
-          cx="56"
-          cy="56"
-          r="42"
+          cx={center}
+          cy={center}
+          r={radius}
           fill="none"
           stroke={color}
           strokeWidth="8"
           strokeLinecap="round"
-          transform="rotate(-90 56 56)"
-          initial={{ strokeDasharray: `0 ${circumference}` }}
-          animate={{ strokeDasharray: `${dash} ${circumference}` }}
+          transform={`rotate(-90 ${center} ${center})`}
+          initial={{ strokeDasharray: `0 ${localCircumference}` }}
+          animate={{ strokeDasharray: `${localDash} ${localCircumference}` }}
           transition={{ duration: 0.8, delay: delay + 0.1 }}
         />
-        <text x="56" y="63" textAnchor="middle" className="fill-slate-100 text-2xl font-black">
+        <text x={center} y={compact ? center + 6 : center + 7} textAnchor="middle" className={compact ? "fill-slate-100 text-xl font-black" : "fill-slate-100 text-2xl font-black"}>
           {pct}%
         </text>
       </svg>
-      <p className="mx-auto mt-3 max-w-[12ch] text-sm font-semibold leading-6 text-slate-200">{label}</p>
+      <p className={compact ? "max-w-none text-sm font-semibold leading-5 text-slate-200" : "mx-auto mt-3 max-w-[12ch] text-sm font-semibold leading-6 text-slate-200"}>
+        {label}
+      </p>
     </motion.div>
   );
 }
@@ -95,11 +103,31 @@ function StrategySimulator({ base }) {
     { label: "Team Capacity", value: teamCapacity, setValue: setTeamCapacity, min: 0, max: 100, suffix: "%" }
   ];
 
+  const presets = [
+    { key: "aggressive", label: "Aggressive Growth", values: { scopeChange: 78, budgetAdjustment: 62, timelineShift: 70, teamCapacity: 58 } },
+    { key: "controlled", label: "Controlled Expansion", values: { scopeChange: 52, budgetAdjustment: 44, timelineShift: 38, teamCapacity: 74 } },
+    { key: "risk_guarded", label: "Risk-Guarded Plan", values: { scopeChange: 34, budgetAdjustment: 48, timelineShift: 22, teamCapacity: 86 } }
+  ];
+
+  function applyPreset(preset) {
+    setScopeChange(preset.values.scopeChange);
+    setBudgetAdjustment(preset.values.budgetAdjustment);
+    setTimelineShift(preset.values.timelineShift);
+    setTeamCapacity(preset.values.teamCapacity);
+  }
+
+  const deltas = [
+    { label: "Risk", current: base.riskScore, next: simulated.riskScore, inverse: true },
+    { label: "Success", current: clamp(100 - base.riskScore, 0, 100), next: simulated.successProbability },
+    { label: "Alignment", current: base.alignmentScore, next: simulated.alignmentScore },
+    { label: "Strain", current: base.resourceStrain, next: simulated.resourceStrain, inverse: true }
+  ];
+
   return (
-    <section className="neon-panel">
+    <section className="neon-panel h-full">
       <h3 className="mb-6 text-2xl font-extrabold text-slate-100">Strategy Simulator</h3>
       <div className="grid gap-4 lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="rounded-2xl border border-slate-800 bg-[#081226] p-4">
+        <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
           <p className="mb-4 text-lg font-semibold text-slate-200">Control Variables</p>
           <div className="space-y-4">
             {controls.map((control) => (
@@ -114,15 +142,40 @@ function StrategySimulator({ base }) {
                   max={control.max}
                   value={control.value}
                   onChange={(event) => control.setValue(Number(event.target.value))}
-                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-[#111f3a] accent-[#7c4dff]"
+                  style={{ "--progress": `${((control.value - control.min) / (control.max - control.min)) * 100}%` }}
+                  className="sim-slider h-2 w-full cursor-pointer appearance-none"
                 />
+                <div className="mt-1 grid grid-cols-5 gap-1 px-0.5">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <span key={`${control.label}-tick-${idx}`} className="h-px bg-[#3f3f46]" />
+                  ))}
+                </div>
               </div>
             ))}
           </div>
 
           <div className="mt-5 flex gap-2">
-            <button className="btn-primary flex-1">Simulate Scenario</button>
-            <button onClick={resetScenario} className="btn-secondary">Reset</button>
+            <div className="flex-1 rounded-xl border border-[#404040] bg-[#171717] px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+              Live simulation updates with every slider change
+            </div>
+            <button onClick={resetScenario} className="btn-secondary min-w-[108px]">
+              <span>Reset</span>
+              <FiRotateCcw size={14} />
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[#404040] bg-[#131313]">
+            {presets.map((preset, index) => (
+              <button
+                key={preset.key}
+                onClick={() => applyPreset(preset)}
+                className={`flex w-full min-w-0 items-center justify-center gap-3 px-3 py-2.5 text-center text-sm font-semibold text-slate-200 transition hover:bg-[#1a1a1a] hover:text-white ${
+                  index !== presets.length - 1 ? "border-b border-[#2f2f2f]" : ""
+                }`}
+              >
+                <span className="truncate text-center">{preset.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -134,9 +187,30 @@ function StrategySimulator({ base }) {
             <ResultCard label="Resource Strain" value={`${simulated.resourceStrain}/100`} />
             <ResultCard label="Alignment Score" value={`${simulated.alignmentScore}/100`} />
           </div>
-          <div className="mt-3 rounded-2xl border border-slate-800 bg-[#0b152a] p-4">
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-[#171717] p-4">
             <p className="text-sm text-slate-400">Financial Impact</p>
             <p className="mt-1 break-words text-3xl font-black text-slate-100 md:text-4xl">${simulated.financialImpact.toFixed(1)}M</p>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-[#404040] bg-[#151515] p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Before/After Comparison</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {deltas.map((row) => {
+                const diff = row.next - row.current;
+                const good = row.inverse ? diff <= 0 : diff >= 0;
+                return (
+                  <div key={row.label} className="rounded-lg border border-[#2f2f2f] bg-[#101010] px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-slate-400">{row.label}</p>
+                    <p className="text-sm text-slate-300">
+                      {row.current} {"->"} <span className="font-semibold text-slate-100">{row.next}</span>
+                    </p>
+                    <p className={`text-xs font-semibold ${good ? "text-emerald-300" : "text-red-300"}`}>
+                      {diff > 0 ? "+" : ""}{diff} delta
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -146,20 +220,20 @@ function StrategySimulator({ base }) {
 
 function ResultCard({ label, value }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-slate-800 bg-[#0b152a] p-4">
+    <div className="min-w-0 rounded-2xl border border-slate-800 bg-[#171717] p-4">
       <p className="text-sm leading-5 text-slate-400">{label}</p>
       <p className="mt-1 break-words text-xl font-black leading-tight tabular-nums text-slate-100 sm:text-2xl md:text-[1.7rem]">{value}</p>
     </div>
   );
 }
 
-function KpiCard({ title, value, icon: Icon, accent = "#6b6dff", delay = 0 }) {
+function KpiCard({ title, value, icon: Icon, accent = "#d97706", delay = 0 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
-      className="rounded-2xl border border-slate-800 bg-[#091226] p-4"
+      className="rounded-2xl border border-slate-800 bg-[#121212] p-4"
     >
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
@@ -178,17 +252,17 @@ function ProgressRing({ value }) {
   const dash = (normalized / 100) * circumference;
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+    <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
       <p className="mb-4 text-sm font-semibold text-slate-300">Pipeline Completion</p>
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
         <svg width="116" height="116" viewBox="0 0 116 116">
-          <circle cx="58" cy="58" r="44" fill="none" stroke="#132341" strokeWidth="10" />
+          <circle cx="58" cy="58" r="44" fill="none" stroke="#1f1f1f" strokeWidth="10" />
           <motion.circle
             cx="58"
             cy="58"
             r="44"
             fill="none"
-            stroke="#6b6dff"
+            stroke="#d97706"
             strokeWidth="10"
             strokeLinecap="round"
             transform="rotate(-90 58 58)"
@@ -211,16 +285,16 @@ function ProgressRing({ value }) {
 
 function CountBars({ analysis }) {
   const bars = [
-    { key: "functional_count", label: "Functional", color: "#6b6dff" },
-    { key: "timeline_count", label: "Timeline", color: "#4d7dff" },
-    { key: "risk_count", label: "Risks", color: "#ff5e00" },
-    { key: "conflict_count", label: "Conflicts", color: "#ff2d55" }
+    { key: "functional_count", label: "Functional", color: "#d97706" },
+    { key: "timeline_count", label: "Timeline", color: "#a16207" },
+    { key: "risk_count", label: "Risks", color: "#ea580c" },
+    { key: "conflict_count", label: "Conflicts", color: "#dc2626" }
   ];
 
   const max = Math.max(1, ...bars.map((item) => analysis[item.key] || 0));
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+    <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
       <p className="mb-4 text-sm font-semibold text-slate-300">Extraction Distribution</p>
       <div className="space-y-3">
         {bars.map((item, idx) => {
@@ -231,7 +305,7 @@ function CountBars({ analysis }) {
                 <span>{item.label}</span>
                 <span className="font-semibold">{value}</span>
               </div>
-              <div className="h-2 rounded-full bg-[#0f1b34]">
+              <div className="h-2 rounded-full bg-[#1f1f1f]">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(value / max) * 100}%` }}
@@ -250,17 +324,22 @@ function CountBars({ analysis }) {
 
 function SeverityCard({ severity }) {
   const rows = [
-    { label: "High", value: severity?.high || 0, color: "#ff2d55" },
-    { label: "Medium", value: severity?.medium || 0, color: "#ff5e00" },
-    { label: "Low", value: severity?.low || 0, color: "#65d208" }
+    { label: "High", value: severity?.high || 0, color: "#dc2626" },
+    { label: "Medium", value: severity?.medium || 0, color: "#ea580c" },
+    { label: "Low", value: severity?.low || 0, color: "#65a30d" }
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+    <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
       <p className="mb-4 text-sm font-semibold text-slate-300">Conflict Severity</p>
       <div className="grid gap-2 md:grid-cols-3">
         {rows.map((row) => (
-          <div key={row.label} className="rounded-xl border border-slate-800 bg-[#0b162d] p-3 text-center">
+          <div
+            key={row.label}
+            className={`rounded-xl border border-slate-800 bg-[#171717] p-3 text-center ${
+              row.label === "High" ? "shadow-[0_0_22px_rgba(220,38,38,0.35)]" : row.label === "Medium" ? "shadow-[0_0_18px_rgba(234,88,12,0.3)]" : "shadow-[0_0_14px_rgba(101,163,13,0.25)]"
+            }`}
+          >
             <p className="text-xs uppercase tracking-wide text-slate-400">{row.label}</p>
             <p className="mt-1 text-3xl font-black" style={{ color: row.color }}>
               {row.value}
@@ -274,7 +353,7 @@ function SeverityCard({ severity }) {
 
 function SimpleList({ title, icon: Icon, items, empty }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+    <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
         <Icon size={16} />
         {title}
@@ -282,7 +361,7 @@ function SimpleList({ title, icon: Icon, items, empty }) {
       {items.length === 0 ? <p className="text-sm text-slate-500">{empty}</p> : null}
       <div className="space-y-2">
         {items.slice(0, 6).map((item) => (
-          <div key={item} className="rounded-lg border border-slate-800 bg-[#0b162d] px-3 py-2 text-sm text-slate-300 break-words">
+          <div key={item} className="rounded-lg border border-slate-800 bg-[#171717] px-3 py-2 text-sm text-slate-300 break-words">
             {item}
           </div>
         ))}
@@ -292,29 +371,60 @@ function SimpleList({ title, icon: Icon, items, empty }) {
 }
 
 function HistoryRiskTrend({ history }) {
-  const points = history.slice(0, 8).reverse().map((item) => item.stats?.riskMentions || 0);
+  const recent = history.slice(0, 8).reverse();
+  const points = recent.map((item) => item.stats?.riskMentions || 0);
   const safe = points.length ? points : [0, 0, 0, 0];
-  const max = Math.max(1, ...safe);
+  const max = Math.max(1, ...safe, 4);
+
+  const chart = {
+    width: 340,
+    height: 180,
+    left: 42,
+    right: 12,
+    top: 14,
+    bottom: 30
+  };
+  const innerW = chart.width - chart.left - chart.right;
+  const innerH = chart.height - chart.top - chart.bottom;
+  const xAt = (idx) => chart.left + (idx / Math.max(safe.length - 1, 1)) * innerW;
+  const yAt = (value) => chart.top + innerH - (value / max) * innerH;
 
   const line = safe
     .map((value, idx) => {
-      const x = (idx / Math.max(safe.length - 1, 1)) * 280;
-      const y = 110 - (value / max) * 90;
+      const x = xAt(idx);
+      const y = yAt(value);
       return `${x},${y}`;
     })
     .join(" ");
 
+  const yTicks = [0, Math.round(max * 0.33), Math.round(max * 0.66), max];
+  const xLabels = safe.map((_, idx) => `Run ${idx + 1}`);
+
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+    <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
         <FiActivity size={16} />
         Historical Risk Trend
       </div>
-      <svg viewBox="0 0 280 120" className="h-28 w-full md:h-32">
-        <line x1="0" y1="110" x2="280" y2="110" stroke="#1a2a4a" strokeWidth="1" />
+      <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-40 w-full">
+        <line x1={chart.left} y1={chart.top} x2={chart.left} y2={chart.top + innerH} stroke="#525252" strokeWidth="1.5" />
+        <line x1={chart.left} y1={chart.top + innerH} x2={chart.left + innerW} y2={chart.top + innerH} stroke="#525252" strokeWidth="1.5" />
+
+        {yTicks.map((tick) => {
+          const y = yAt(tick);
+          return (
+            <g key={`yt-${tick}`}>
+              <line x1={chart.left} y1={y} x2={chart.left + innerW} y2={y} stroke="#232323" strokeWidth="1" />
+              <text x={chart.left - 8} y={y + 4} textAnchor="end" className="fill-slate-500 text-[10px]">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+
         <motion.polyline
           fill="none"
-          stroke="#6b6dff"
+          stroke="#d97706"
           strokeWidth="3"
           strokeLinecap="round"
           initial={{ pathLength: 0 }}
@@ -323,11 +433,34 @@ function HistoryRiskTrend({ history }) {
           points={line}
         />
         {safe.map((value, idx) => {
-          const x = (idx / Math.max(safe.length - 1, 1)) * 280;
-          const y = 110 - (value / max) * 90;
-          return <circle key={`${value}-${idx}`} cx={x} cy={y} r="4" fill="#7c4dff" />;
+          const x = xAt(idx);
+          const y = yAt(value);
+          return (
+            <g key={`${value}-${idx}`}>
+              <circle cx={x} cy={y} r="4" fill="#b45309" />
+              <text x={x} y={chart.top + innerH + 16} textAnchor="middle" className="fill-slate-500 text-[10px]">
+                {xLabels[idx]}
+              </text>
+            </g>
+          );
         })}
+
+        <text x={chart.width / 2} y={chart.height - 4} textAnchor="middle" className="fill-slate-400 text-[10px]">
+          BRD Generation Sequence (oldest to newest)
+        </text>
+        <text
+          x={12}
+          y={chart.top + innerH / 2}
+          transform={`rotate(-90 12 ${chart.top + innerH / 2})`}
+          textAnchor="middle"
+          className="fill-slate-400 text-[10px]"
+        >
+          Risk Mentions Count
+        </text>
       </svg>
+      <p className="mt-2 text-xs text-slate-400">
+        This graph plots extracted risk mentions per BRD run. Higher values indicate more risk-heavy source communication.
+      </p>
     </div>
   );
 }
@@ -361,11 +494,7 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
     if (!keyword) return true;
     return `${item.type || ""} ${item.severity || ""} ${item.detail || ""}`.toLowerCase().includes(keyword);
   });
-  const assessment = insightData?.brd_assessment;
   const generationOptions = insightData?.generation_options;
-  const filteredStrengths = filterList(assessment?.strengths);
-  const filteredGaps = filterList(assessment?.gaps);
-  const filteredRecommendations = filterList(assessment?.recommendations);
 
   const strategicHealth = {
     strategicConfidence: clamp(70 + analysis.functional_count * 2 - analysis.conflict_count * 3, 10, 97),
@@ -387,15 +516,15 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
 
   return (
     <div className="space-y-5 pb-10">
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid items-stretch gap-4 xl:grid-cols-[0.78fr_1.22fr]">
         <section className="neon-panel interactive-tile">
           <h3 className="mb-6 text-2xl font-extrabold text-slate-100">Strategic Health Overview</h3>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <RingGauge label="AI Strategic Confidence" value={strategicHealth.strategicConfidence} color="#6b6dff" delay={0.03} />
-            <RingGauge label="Execution Readiness" value={strategicHealth.executionReadiness} color="#7c4dff" delay={0.06} />
-            <RingGauge label="Conflict Severity" value={strategicHealth.conflictSeverity} color="#65d208" delay={0.09} />
-            <RingGauge label="Ownership Clarity" value={strategicHealth.ownershipClarity} color="#65d208" delay={0.12} />
-            <RingGauge label="Initiative Success Probability" value={strategicHealth.successProbability} color="#4d7dff" delay={0.15} />
+          <div className="space-y-3">
+            <RingGauge compact label="AI Strategic Confidence" value={strategicHealth.strategicConfidence} color="#d97706" delay={0.03} />
+            <RingGauge compact label="Execution Readiness" value={strategicHealth.executionReadiness} color="#b45309" delay={0.06} />
+            <RingGauge compact label="Conflict Severity" value={strategicHealth.conflictSeverity} color="#65a30d" delay={0.09} />
+            <RingGauge compact label="Ownership Clarity" value={strategicHealth.ownershipClarity} color="#65a30d" delay={0.12} />
+            <RingGauge compact label="Initiative Success Probability" value={strategicHealth.successProbability} color="#a16207" delay={0.15} />
           </div>
         </section>
 
@@ -403,12 +532,12 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard title="Characters" value={input.characters.toLocaleString()} icon={FiFileText} accent="#6b6dff" delay={0.02} />
-        <KpiCard title="Source Items" value={input.items} icon={FiDatabase} accent="#4d7dff" delay={0.05} />
-        <KpiCard title="Chunks" value={input.chunks} icon={FiLayers} accent="#22d3ee" delay={0.08} />
-        <KpiCard title="Functional" value={analysis.functional_count} icon={FiCheckCircle} accent="#65d208" delay={0.11} />
-        <KpiCard title="Risks" value={analysis.risk_count} icon={FiAlertTriangle} accent="#ff5e00" delay={0.14} />
-        <KpiCard title="Conflicts" value={analysis.conflict_count} icon={FiGitMerge} accent="#ff2d55" delay={0.17} />
+        <KpiCard title="Characters" value={input.characters.toLocaleString()} icon={FiFileText} accent="#d97706" delay={0.02} />
+        <KpiCard title="Source Items" value={input.items} icon={FiDatabase} accent="#a16207" delay={0.05} />
+        <KpiCard title="Chunks" value={input.chunks} icon={FiLayers} accent="#65a30d" delay={0.08} />
+        <KpiCard title="Functional" value={analysis.functional_count} icon={FiCheckCircle} accent="#65a30d" delay={0.11} />
+        <KpiCard title="Risks" value={analysis.risk_count} icon={FiAlertTriangle} accent="#ea580c" delay={0.14} />
+        <KpiCard title="Conflicts" value={analysis.conflict_count} icon={FiGitMerge} accent="#dc2626" delay={0.17} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -429,7 +558,7 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SimpleList title="Risk Signals" icon={FiFlag} items={risks} empty="No risk signals extracted yet." />
-        <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+        <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-200">
             <FiShield size={16} />
             Conflict Details
@@ -437,7 +566,7 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
           {conflicts.length === 0 ? <p className="text-sm text-slate-500">No conflicts detected.</p> : null}
           <div className="space-y-2">
             {conflicts.slice(0, 5).map((item, idx) => (
-              <div key={`${item.type}-${idx}`} className="rounded-lg border border-slate-800 bg-[#0b162d] p-3">
+              <div key={`${item.type}-${idx}`} className="rounded-lg border border-slate-800 bg-[#171717] p-3">
                 <div className="mb-1 flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-200 pr-2">{item.type}</p>
                   <span className="kpi-badge">{item.severity}</span>
@@ -451,20 +580,8 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
 
       <HistoryRiskTrend history={history || []} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">BRD Quality Audit</p>
-          <div className="grid grid-cols-2 gap-3">
-            <ResultCard label="Quality Score" value={`${assessment?.quality_score ?? 0}/100`} />
-            <ResultCard label="Delivery Confidence" value={`${assessment?.delivery_confidence ?? 0}/100`} />
-          </div>
-          <div className="mt-3 rounded-xl border border-slate-800 bg-[#0b162d] p-3">
-            <p className="text-sm font-semibold text-slate-200">Summary</p>
-            <p className="mt-1 text-sm text-slate-400">{assessment?.summary || "Assessment unavailable for this session."}</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4">
+      <div className="grid gap-4 lg:grid-cols-1">
+        <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Generation Profile</p>
           <div className="space-y-1 text-sm text-slate-300">
             <p><span className="text-slate-400">Audience:</span> {generationOptions?.audience || "Default"}</p>
@@ -480,28 +597,7 @@ export default function AnalysisDashboard({ insightData, progress, history, sear
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <SimpleList
-          title="AI-Detected Strengths"
-          icon={FiCheckCircle}
-          items={filteredStrengths}
-          empty="No strengths listed."
-        />
-        <SimpleList
-          title="AI-Detected Gaps"
-          icon={FiAlertTriangle}
-          items={filteredGaps}
-          empty="No gaps listed."
-        />
-        <SimpleList
-          title="AI Recommendations"
-          icon={FiActivity}
-          items={filteredRecommendations}
-          empty="No recommendations listed."
-        />
-      </div>
-
-      <div className="rounded-2xl border border-slate-800 bg-[#091226] p-4 text-sm text-slate-400">
+      <div className="rounded-2xl border border-slate-800 bg-[#121212] p-4 text-sm text-slate-400">
         <p className="font-semibold text-slate-200">Data Integrity</p>
         <p className="mt-1">
           All KPI values above are derived directly from current session artifacts: ingestion chunks, extracted requirements/timelines/risks,

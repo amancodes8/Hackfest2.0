@@ -6,9 +6,9 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, closeSidebar 
   const { history, resetSession } = useAppStore();
 
   const navItems = [
-    { id: "workspace", label: "Workspace", icon: FiCpu },
-    { id: "insights", label: "Insights", icon: FiBarChart2 },
-    { id: "history", label: "History", icon: FiClock }
+    { id: "workspace", label: "Strategy Lab", icon: FiCpu },
+    { id: "insights", label: "Risk Intelligence", icon: FiBarChart2 },
+    { id: "history", label: "Decision Archive", icon: FiClock }
   ];
 
   return (
@@ -16,16 +16,16 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, closeSidebar 
       {isOpen ? <button className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={closeSidebar} /> : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-[#1f2f50] bg-[#050d1d]/95 p-6 backdrop-blur-xl transition-transform duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-[#2f2f2f] bg-[#0d0d0d]/95 p-6 backdrop-blur-xl transition-transform duration-300 lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="mb-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-zinc-500 to-zinc-700" />
             <div>
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-100">BRD.AI</h2>
-              <p className="text-[11px] text-slate-400">Enterprise Workspace</p>
+              <h2 className="text-lg font-extrabold tracking-tight text-slate-100">PREFLIGHT</h2>
+              <p className="text-[11px] text-slate-400">Pre-Execution Analysis System</p>
             </div>
           </div>
           <button onClick={closeSidebar} className="rounded-lg p-1 text-slate-300 lg:hidden">
@@ -44,8 +44,8 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, closeSidebar 
               }}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                 activeTab === item.id
-                  ? "border border-[#304d8a] bg-[#101f40] text-[#a4bbff]"
-                  : "text-slate-300 hover:bg-[#0d172e] hover:text-slate-100"
+                  ? "border border-[#737373] bg-[#1f1f1f] text-[#f59e0b]"
+                  : "text-slate-300 hover:bg-[#1f1f1f] hover:text-slate-100"
               }`}
             >
               <item.icon className="text-lg" />
@@ -64,7 +64,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, closeSidebar 
                   setActiveTab("history");
                   closeSidebar();
                 }}
-                className="group flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs text-slate-300 transition hover:bg-[#0d172e]"
+                className="group flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs text-slate-300 transition hover:bg-[#1f1f1f]"
               >
                 <span className="truncate">{item.title}</span>
                 <FiChevronRight className="opacity-0 transition group-hover:opacity-100" />

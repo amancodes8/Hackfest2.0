@@ -28,15 +28,14 @@ function parseSections(markdown) {
       continue;
     }
 
-    if (!current) {
-      current = { heading: "Executive Summary", content: "" };
-      sections.push(current);
-    }
-
-    current.content += `${line}\n`;
+    if (current) current.content += `${line}\n`;
   }
 
   return sections.filter((item) => item.heading && item.content.trim());
+}
+
+function cleanHeadingLabel(heading = "") {
+  return heading.replace(/^\d+[\).\s-]+/, "").trim();
 }
 
 function findByKeywords(sections, keywords) {
@@ -46,7 +45,17 @@ function findByKeywords(sections, keywords) {
 
 export default function BrdViewer({ brd, insightData }) {
   const sections = useMemo(() => parseSections(brd), [brd]);
-  const headings = sections.map((item) => item.heading);
+  const headings = useMemo(() => {
+    const seen = new Set();
+    return sections
+      .map((item) => item.heading)
+      .filter((heading) => {
+        const key = cleanHeadingLabel(heading).toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [sections]);
   const brief = insightData?.executive_brief || null;
   const evidence = insightData?.evidence || [];
 
@@ -130,10 +139,10 @@ ${brief.recommendation}
               <a
                 key={heading}
                 href={`#${toAnchor(heading)}`}
-                className="block rounded-lg px-2 py-1.5 text-slate-300 transition hover:bg-[#102040] hover:text-[#b6c6ff]"
+                className="block rounded-lg px-2 py-1.5 text-slate-300 transition hover:bg-[#1f1f1f] hover:text-[#f5f5f5]"
               >
                 <span className="mr-2 text-xs text-slate-400">{idx + 1}.</span>
-                {heading}
+                {cleanHeadingLabel(heading)}
               </a>
             ))}
           </nav>
@@ -141,10 +150,10 @@ ${brief.recommendation}
       </aside>
 
       <article className="doc-surface">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#1f3054] pb-5">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#2f2f2f] pb-5">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-extrabold text-slate-100">
-              <FiFileText className="text-[#88a0ff]" />
+              <FiFileText className="text-[#d97706]" />
               Document Preview
             </h2>
             <p className="mt-1 text-sm text-slate-400">Switch tabs to focus quickly on Risks, Timeline, Conflicts, and other key sections.</p>
@@ -169,8 +178,8 @@ ${brief.recommendation}
               onClick={() => setActiveTab(tab.key)}
               className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 activeTab === tab.key
-                  ? "bg-gradient-to-r from-[#5f72ff] to-[#7c4dff] text-white"
-                  : "border border-[#2b3f69] bg-[#0b162d] text-slate-300 hover:bg-[#102040]"
+                  ? "bg-gradient-to-r from-[#d97706] to-[#b45309] text-white"
+                  : "border border-[#525252] bg-[#171717] text-slate-300 hover:bg-[#1f1f1f]"
               }`}
             >
               {tab.label}
@@ -193,18 +202,18 @@ ${brief.recommendation}
         </div>
 
         {evidence.length ? (
-          <div className="mt-8 border-t border-[#1f3054] pt-6">
+          <div className="mt-8 border-t border-[#2f2f2f] pt-6">
             <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-100">
-              <FiLink2 className="text-[#8ea6ff]" />
+              <FiLink2 className="text-[#d97706]" />
               Source Evidence Links
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {evidence.map((group) => (
-                <div key={group.section} className="rounded-xl border border-[#22355b] bg-[#091226] p-3">
+                <div key={group.section} className="rounded-xl border border-[#404040] bg-[#121212] p-3">
                   <p className="mb-2 text-sm font-semibold text-slate-200">{group.section}</p>
                   <div className="space-y-2">
                     {(group.items || []).slice(0, 3).map((item, index) => (
-                      <div key={`${group.section}-${index}`} className="rounded-lg border border-[#22355b] bg-[#0c1a34] p-2">
+                      <div key={`${group.section}-${index}`} className="rounded-lg border border-[#404040] bg-[#1f1f1f] p-2">
                         <p className="text-xs text-slate-300">{item.claim}</p>
                         <p className="mt-1 text-xs text-slate-400">“{item.snippet}”</p>
                         <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
